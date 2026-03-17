@@ -3,22 +3,634 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello</title>
+  <title>Circle Bisection Game</title>
   <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1d2433;
+      --muted: #5f6b85;
+      --accent: #4f46e5;
+      --accent-soft: #eef0ff;
+      --success: #0f9d58;
+      --danger: #d93025;
+      --border: #dde3f0;
+      --shadow: 0 14px 40px rgba(22, 30, 50, 0.08);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #edf2ff 0, transparent 25%),
+        radial-gradient(circle at bottom left, #eefdf6 0, transparent 20%),
+        var(--bg);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(100%, 920px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 0;
+    }
+
+    .left {
+      padding: 28px;
+      border-right: 1px solid var(--border);
+    }
+
+    .right {
+      padding: 28px;
+      background: linear-gradient(180deg, #fcfdff, #f8faff);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .badge {
+      display: inline-flex;
       align-items: center;
-      font-family: Arial, sans-serif;
-      font-size: 48px;
-      background: white;
-      color: black;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .canvas-shell {
+      margin-top: 22px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      border: 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .secondary {
+      background: #edf1f7;
+      color: var(--text);
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .value {
+      margin-top: 8px;
+      font-size: clamp(1.9rem, 4vw, 2.7rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .small {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .message {
+      min-height: 48px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .good { color: var(--success); }
+    .bad { color: var(--danger); }
+
+    .steps {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 860px) {
+      .wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .left {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .left, .right {
+        padding: 20px;
+      }
     }
   </style>
 </head>
 <body>
-  shubham ki gaand me chhed hai
+  <main class="card">
+    <div class="wrap">
+      <section class="left">
+        <h1>Circle Bisection</h1>
+        <div class="sub">
+          Draw one curve that starts outside the circle, passes through it, and ends outside again.
+          The closer the two pieces are in area, the higher your score.
+        </div>
+        <div class="badge">✂️ One cut only</div>
+
+        <div class="canvas-shell">
+          <canvas id="gameCanvas" width="700" height="700" aria-label="Circle cutting game"></canvas>
+        </div>
+
+        <div class="controls">
+          <button class="primary" id="resetBtn">Reset</button>
+          <button class="secondary" id="demoBtn">Show perfect cut</button>
+        </div>
+      </section>
+
+      <aside class="right">
+        <div class="panel">
+          <div class="label">Cuts</div>
+          <div class="value" id="cutCount">0 / 1</div>
+          <div class="small">You get one freehand attempt per round.</div>
+        </div>
+
+        <div class="panel">
+          <div class="label">Uniformity</div>
+          <div class="value" id="scoreValue">—</div>
+          <div class="small" id="scoreMeta">Make a valid cut to see your result.</div>
+        </div>
+
+        <div class="panel">
+          <div class="label">How to play</div>
+          <ol class="steps">
+            <li>Start drawing from outside the circle.</li>
+            <li>Cross through the circle once.</li>
+            <li>End the stroke outside the circle.</li>
+          </ol>
+        </div>
+
+        <div class="panel">
+          <div class="label">Status</div>
+          <div class="message" id="message">Try to split the circle into two equal halves.</div>
+        </div>
+
+        <div class="footer-note">
+          This clone is a simple HTML, CSS, and JavaScript canvas game, ready to host on GitHub Pages.
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const cutCountEl = document.getElementById('cutCount');
+    const scoreValueEl = document.getElementById('scoreValue');
+    const scoreMetaEl = document.getElementById('scoreMeta');
+    const messageEl = document.getElementById('message');
+    const resetBtn = document.getElementById('resetBtn');
+    const demoBtn = document.getElementById('demoBtn');
+
+    const state = {
+      path: [],
+      isDrawing: false,
+      finished: false,
+      result: null,
+      center: { x: canvas.width / 2, y: canvas.height / 2 },
+      radius: 220,
+    };
+
+    function dist(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function pointInsideCircle(p) {
+      return dist(p, state.center) < state.radius;
+    }
+
+    function circleArea() {
+      return Math.PI * state.radius * state.radius;
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function getPointerPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (evt.clientX - rect.left) * scaleX,
+        y: (evt.clientY - rect.top) * scaleY,
+      };
+    }
+
+    function polygonArea(points) {
+      let area = 0;
+      for (let i = 0; i < points.length; i++) {
+        const p1 = points[i];
+        const p2 = points[(i + 1) % points.length];
+        area += p1.x * p2.y - p2.x * p1.y;
+      }
+      return Math.abs(area) / 2;
+    }
+
+    function sampleArc(from, to, clockwise, steps = 120) {
+      const c = state.center;
+      let a1 = Math.atan2(from.y - c.y, from.x - c.x);
+      let a2 = Math.atan2(to.y - c.y, to.x - c.x);
+
+      if (clockwise) {
+        while (a2 > a1) a2 -= Math.PI * 2;
+      } else {
+        while (a2 < a1) a2 += Math.PI * 2;
+      }
+
+      const pts = [];
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const a = a1 + (a2 - a1) * t;
+        pts.push({
+          x: c.x + state.radius * Math.cos(a),
+          y: c.y + state.radius * Math.sin(a),
+        });
+      }
+      return pts;
+    }
+
+    function segmentCircleIntersections(p1, p2) {
+      const c = state.center;
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const fx = p1.x - c.x;
+      const fy = p1.y - c.y;
+
+      const a = dx * dx + dy * dy;
+      const b = 2 * (fx * dx + fy * dy);
+      const cc = fx * fx + fy * fy - state.radius * state.radius;
+      const disc = b * b - 4 * a * cc;
+
+      if (disc < 0 || a === 0) return [];
+
+      const s = Math.sqrt(disc);
+      const t1 = (-b - s) / (2 * a);
+      const t2 = (-b + s) / (2 * a);
+      const hits = [];
+
+      [t1, t2].forEach((t) => {
+        if (t >= 0 && t <= 1) {
+          hits.push({
+            t,
+            point: { x: p1.x + dx * t, y: p1.y + dy * t },
+          });
+        }
+      });
+
+      hits.sort((h1, h2) => h1.t - h2.t);
+      return hits;
+    }
+
+    function analyzeCut(points) {
+      if (points.length < 2) {
+        return { ok: false, reason: 'Draw a longer curve.' };
+      }
+
+      const startedOutside = !pointInsideCircle(points[0]);
+      const endedOutside = !pointInsideCircle(points[points.length - 1]);
+
+      if (!startedOutside || !endedOutside) {
+        return {
+          ok: false,
+          reason: 'The stroke must start outside the circle and end outside the circle.',
+        };
+      }
+
+      const intersections = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const hits = segmentCircleIntersections(points[i], points[i + 1]);
+        hits.forEach((hit) => {
+          intersections.push({
+            pathIndex: i,
+            t: hit.t,
+            point: hit.point,
+          });
+        });
+      }
+
+      if (intersections.length < 2) {
+        return {
+          ok: false,
+          reason: 'Your curve must pass through the circle and come out the other side.',
+        };
+      }
+
+      const first = intersections[0];
+      const last = intersections[intersections.length - 1];
+
+      if (first.pathIndex === last.pathIndex && Math.abs(first.t - last.t) < 1e-5) {
+        return { ok: false, reason: 'Could not detect a valid crossing.' };
+      }
+
+      const interiorPoints = [first.point];
+
+      for (let i = first.pathIndex + 1; i <= last.pathIndex; i++) {
+        if (i < points.length - 1) {
+          interiorPoints.push(points[i]);
+        }
+      }
+
+      interiorPoints.push(last.point);
+
+      const arcCW = sampleArc(last.point, first.point, true);
+      const regionPoints = [...interiorPoints, ...arcCW];
+      const area1 = polygonArea(regionPoints);
+      const total = circleArea();
+      const safeArea1 = clamp(area1, 0, total);
+      const area2 = total - safeArea1;
+      const difference = Math.abs(area1 - area2);
+      const uniformity = Math.max(0, 100 * (1 - difference / total));
+
+      return {
+        ok: true,
+        first: first.point,
+        last: last.point,
+        interiorPoints,
+        area1: safeArea1,
+        area2,
+        uniformity,
+      };
+    }
+
+    function drawBaseCircle() {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(state.center.x, state.center.y, state.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8fbff';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#1f2937';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRegion(result) {
+      if (!result || !result.ok) return;
+
+      const arc = sampleArc(result.last, result.first, true);
+      const region = [...result.interiorPoints, ...arc];
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(region[0].x, region[0].y);
+      for (let i = 1; i < region.length; i++) {
+        ctx.lineTo(region[i].x, region[i].y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(79, 70, 229, 0.14)';
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(state.center.x, state.center.y, state.radius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(15, 157, 88, 0.12)';
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    }
+
+    function drawPath() {
+      if (!state.path.length) return;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.moveTo(state.path[0].x, state.path[0].y);
+      for (let i = 1; i < state.path.length; i++) {
+        ctx.lineTo(state.path[i].x, state.path[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawGuideText() {
+      ctx.save();
+      ctx.fillStyle = '#7b879d';
+      ctx.font = '600 20px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Draw one cut through the circle', canvas.width / 2, 52);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBaseCircle();
+      if (state.result && state.result.ok) {
+        drawRegion(state.result);
+      }
+      drawPath();
+      drawGuideText();
+    }
+
+    function setMessage(text, kind = 'normal') {
+      messageEl.textContent = text;
+      messageEl.className = 'message';
+      if (kind === 'good') messageEl.classList.add('good');
+      if (kind === 'bad') messageEl.classList.add('bad');
+    }
+
+    function updateSidebar() {
+      cutCountEl.textContent = state.finished ? '1 / 1' : '0 / 1';
+
+      if (state.result && state.result.ok) {
+        const score = state.result.uniformity;
+        scoreValueEl.textContent = score.toFixed(2) + '%';
+        scoreMetaEl.textContent = `Piece areas: ${state.result.area1.toFixed(0)} vs ${state.result.area2.toFixed(0)} px²`;
+
+        if (score > 98) {
+          setMessage('That is extremely close to a perfect bisection.', 'good');
+        } else if (score > 90) {
+          setMessage('Nice cut. The two sides are pretty balanced.', 'good');
+        } else {
+          setMessage('Valid cut, but the two sides are still noticeably uneven.');
+        }
+      } else if (state.finished) {
+        scoreValueEl.textContent = 'Invalid';
+        scoreMetaEl.textContent = 'Press Reset and try again.';
+      } else {
+        scoreValueEl.textContent = '—';
+        scoreMetaEl.textContent = 'Make a valid cut to see your result.';
+      }
+    }
+
+    function resetGame() {
+      state.path = [];
+      state.isDrawing = false;
+      state.finished = false;
+      state.result = null;
+      setMessage('Try to split the circle into two equal halves.');
+      updateSidebar();
+      render();
+    }
+
+    function startDraw(evt) {
+      if (state.finished) return;
+      state.isDrawing = true;
+      state.path = [getPointerPos(evt)];
+      state.result = null;
+      setMessage('Keep going: start outside, cross the circle, end outside.');
+      updateSidebar();
+      render();
+      canvas.setPointerCapture(evt.pointerId);
+    }
+
+    function moveDraw(evt) {
+      if (!state.isDrawing || state.finished) return;
+      const pos = getPointerPos(evt);
+      const last = state.path[state.path.length - 1];
+      if (!last || dist(pos, last) > 2) {
+        state.path.push(pos);
+        render();
+      }
+    }
+
+    function endDraw(evt) {
+      if (!state.isDrawing || state.finished) return;
+      state.isDrawing = false;
+      state.finished = true;
+      const pos = getPointerPos(evt);
+      const last = state.path[state.path.length - 1];
+      if (!last || dist(pos, last) > 2) {
+        state.path.push(pos);
+      }
+
+      const result = analyzeCut(state.path);
+      if (!result.ok) {
+        state.result = null;
+        setMessage(result.reason, 'bad');
+        scoreValueEl.textContent = 'Invalid';
+        scoreMetaEl.textContent = 'Press Reset and try again.';
+      } else {
+        state.result = result;
+      }
+
+      updateSidebar();
+      render();
+    }
+
+    function loadPerfectCut() {
+      const c = state.center;
+      const r = state.radius + 30;
+      state.path = [
+        { x: c.x, y: c.y - r },
+        { x: c.x, y: c.y - 120 },
+        { x: c.x, y: c.y },
+        { x: c.x, y: c.y + 120 },
+        { x: c.x, y: c.y + r },
+      ];
+      state.finished = true;
+      state.result = analyzeCut(state.path);
+      updateSidebar();
+      render();
+    }
+
+    canvas.addEventListener('pointerdown', startDraw);
+    canvas.addEventListener('pointermove', moveDraw);
+    canvas.addEventListener('pointerup', endDraw);
+    canvas.addEventListener('pointercancel', endDraw);
+
+    resetBtn.addEventListener('click', resetGame);
+    demoBtn.addEventListener('click', loadPerfectCut);
+
+    resetGame();
+  </script>
 </body>
 </html>
